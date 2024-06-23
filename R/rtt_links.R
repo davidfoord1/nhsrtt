@@ -58,7 +58,33 @@ rtt_links_by_year <- function(url, start_month, end_month) {
   )
 }
 
-
+#' Get monthly CSV download links
+#'
+#' Get the links for every CSV file for the date range specified.
+#'
+#' Unlike [rtt_links_by_year()] we cannot generate exact strings because of
+#' variations in the links by file size, and whether the data has been revised
+#' and upload date. e.g.:
+#'
+#' Full-CSV-data-file-May23-ZIP-3627K-revised.zip
+#'
+#' Full-CSV-data-file-Apr24-ZIP-3855K-11417.zip
+#'
+#' Instead we approach using regex patterns passed to [grepl()]. First is
+#' `"Full-CSV-data-file"` to find only the full CSV ZIP files. A second pattern
+#' addresses the date range. The files have dates in format `%b%y` like Apr20. So
+#' we generate all months in that format from the start month to the stop month.
+#'
+#' So with `start_month = "2020-03"` and `end_month = "2020-05"` the pattern would
+#' be `"Mar20|Apr20|May20"` and a length 3 character vector would be returned.
+#'
+#' @param links_by_year Character vector of links to financial year RTT stats
+#'   pages.
+#'
+#' @param start_month The first month in the range of links wanted.
+#' @param end_month The last month in the range of links wanted.
+#'
+#' @return A character vector of links for downloading RTT ZIPs
 rtt_links_by_month <- function(links_by_year,
                                start_month,
                                end_month) {
