@@ -1,8 +1,9 @@
-rtt_links <- function(start_month, end_month) {
+rtt_links <- function(start_month, end_month = Sys.Date()) {
   rtt_stats_page <- paste0("https://www.england.nhs.uk/statistics/",
                       "statistical-work-areas/rtt-waiting-times/")
 
-  rtt_links_by_year(rtt_stats_page, start_month, end_month)
+  rtt_links_by_year(rtt_stats_page, start_month, end_month) |>
+    rtt_links_by_month(start_month, end_month)
 }
 
 links_in_page <- function(url) {
@@ -55,4 +56,58 @@ rtt_links_by_year <- function(url, start_month, end_month) {
   paste0(
     url, "rtt-data-", yyyy_list, "-", yy_list
   )
+}
+
+
+rtt_links_by_month <- function(links_by_year,
+                               start_month,
+                               end_month) {
+
+  # Get all the links in the page for each year
+  links <- links_by_year |>
+    lapply(links_in_page) |>
+    unlist() |>
+    stats::na.omit() |>
+    unique()
+
+  links <- links[grepl("Full-CSV-data-file", links)]
+
+  # The files have dates in format %b%y like Apr20. So we generate all months in
+  # that format from the start month to the stop month.
+  start_yy <- substr(start_month, 3, 4)
+  stop_yy <- substr(end_month, 3, 4)
+
+  start_mm <- as.numeric(substr(start_month, 6, 7))
+  stop_mm <- as.numeric(substr(end_month, 6, 7))
+
+  if (start_yy == stop_yy) {
+    # If the start and stop year are the same we can just get the months
+    # for the month range.
+    include_months <- month.abb[start_mm:stop_mm] |>
+      paste0(start_yy, collapse = "|")
+  } else {
+    # Otherwise we have to list months from the the specified month to Dec for
+    # the start of the range, and January to the specified month for the end of
+    # the range
+    start_months <- month.abb[start_mm:12]
+    stop_months <- month.abb[1:stop_mm]
+
+    start_year_months <- paste0(start_months, start_yy)
+    stop_year_months <- paste0(stop_months, stop_yy)
+
+    # Create every month Jan to Dec for years in the middle
+    inbetween_years <- seq(start_yy, stop_yy)
+    inbetween_years <- inbetween_years[-1]
+    inbetween_years <- inbetween_years[-length(inbetween_years)]
+
+    inbetween_months <-
+      unlist(lapply(inbetween_years, \(x) paste0(month.abb, x)))
+
+    include_months <- c(start_year_months,
+                        inbetween_months,
+                        stop_year_months) |>
+      paste(collapse = "|")
+  }
+
+  links[grepl(include_months, links)]
 }
